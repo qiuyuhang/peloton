@@ -23,7 +23,7 @@ class ExecutorContext;
 namespace function {
 
 class StringFunctions {
- public:
+  public:
   struct StrWithLen {
     // Constructor
     StrWithLen(const char *str, uint32_t length) : str(str), length(length) {}
@@ -74,6 +74,18 @@ class StringFunctions {
   // Length will return the number of characters in the given string
   static uint32_t Length(executor::ExecutorContext &ctx, const char *str,
                          uint32_t length);
+
+  // Upper
+  static StrWithLen Upper(executor::ExecutorContext &ctx, const char *str,
+                         uint32_t str_len);
+
+  // Lower
+  static StrWithLen Lower(executor::ExecutorContext &ctx, const char *str,
+                          uint32_t str_len);
+
+  // Concat
+  static StrWithLen Concat(executor::ExecutorContext &ctx, const char **concat_strs,
+      const uint32_t *str_lens,const uint32_t cnt);
 };
 
 }  // namespace function

@@ -187,6 +187,52 @@ struct Trim : public TypeSystem::UnaryOperatorHandleNull {
   }
 };
 
+// Upper
+struct Upper : public TypeSystem::UnaryOperatorHandleNull {
+  bool SupportsType(const Type &type) const override {
+    return type.GetSqlType() == Varchar::Instance();
+  }
+
+  Type ResultType(UNUSED_ATTRIBUTE const Type &val_type) const override {
+    return Varchar::Instance();
+  }
+
+  Value Impl(CodeGen &codegen, const Value &val,
+             const TypeSystem::InvocationContext &ctx) const override {
+    llvm::Value *executor_ctx = ctx.executor_context;
+    llvm::Value *ret =
+        codegen.Call(StringFunctionsProxy::Upper,
+                     {executor_ctx, val.GetValue(), val.GetLength()});
+
+    llvm::Value *str_ptr = codegen->CreateExtractValue(ret, 0);
+    llvm::Value *str_len = codegen->CreateExtractValue(ret, 1);
+    return Value{Varchar::Instance(), str_ptr, str_len};
+  }
+};
+
+// Lower
+struct Lower : public TypeSystem::UnaryOperatorHandleNull {
+  bool SupportsType(const Type &type) const override {
+    return type.GetSqlType() == Varchar::Instance();
+  }
+
+  Type ResultType(UNUSED_ATTRIBUTE const Type &val_type) const override {
+    return Varchar::Instance();
+  }
+
+  Value Impl(CodeGen &codegen, const Value &val,
+             const TypeSystem::InvocationContext &ctx) const override {
+    llvm::Value *executor_ctx = ctx.executor_context;
+    llvm::Value *ret =
+        codegen.Call(StringFunctionsProxy::Lower,
+                     {executor_ctx, val.GetValue(), val.GetLength()});
+
+    llvm::Value *str_ptr = codegen->CreateExtractValue(ret, 0);
+    llvm::Value *str_len = codegen->CreateExtractValue(ret, 1);
+    return Value{Varchar::Instance(), str_ptr, str_len};
+  }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 ///
 /// Binary operators
@@ -247,6 +293,59 @@ struct Like : public TypeSystem::BinaryOperator {
   }
 };
 
+struct Concat : public TypeSystem::BinaryOperator {
+  bool SupportsTypes(const Type &left_type,
+                     const Type &right_type) const override {
+    return left_type.GetSqlType() == Varchar::Instance() &&
+           left_type == right_type;
+  }
+
+  Type ResultType(UNUSED_ATTRIBUTE const Type &left_type,
+                  UNUSED_ATTRIBUTE const Type &right_type) const override {
+    return Varchar::Instance();
+  }
+
+  Value Impl(CodeGen &codegen, const Value &left, const Value &right,
+             const TypeSystem::InvocationContext &ctx) const {
+    // Call StringFunctions::Concat(...)
+
+    // Setup input arguments
+    llvm::Value *executor_ctx = ctx.executor_context;
+    std::vector<llvm::Value *> args = {executor_ctx, left.GetValue(),
+                                       left.GetLength(), right.GetValue(),
+                                       right.GetLength()};
+
+    // Make call
+    llvm::Value *raw_ret = codegen.Call(StringFunctionsProxy::Concat, args);
+
+    // Return the result
+    return Value{Varchar::Instance(), raw_ret};
+  }
+
+  Value Eval(CodeGen &codegen, const Value &left, const Value &right,
+             const TypeSystem::InvocationContext &ctx) const override {
+    PELOTON_ASSERT(SupportsTypes(left.GetType(), right.GetType()));
+
+    // Pre-condition: Left value is the input string; right value is the pattern
+
+    if (!left.IsNullable()) {
+      return Impl(codegen, left, right, ctx);
+    }
+
+    codegen::Value null_ret, not_null_ret;
+    lang::If input_null{codegen, left.IsNull(codegen)};
+    {
+      // Input is null, return false
+      null_ret = codegen::Value{Boolean::Instance(), codegen.ConstBool(false)};
+    }
+    input_null.ElseBlock();
+    {
+      // Input is not null, invoke LIKE
+      not_null_ret = Impl(codegen, left, right, ctx);
+    }
+    return input_null.BuildPHI(null_ret, not_null_ret);
+  }
+};
 // DateTrunc
 // TODO(lma): Move this to the Timestamp type once the function lookup logic is
 // corrected.

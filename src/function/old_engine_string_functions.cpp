@@ -92,12 +92,28 @@ type::Value OldEngineStringFunctions::CharLength(
 // Concatenate two strings
 type::Value OldEngineStringFunctions::Concat(
     const std::vector<type::Value> &args) {
-  PELOTON_ASSERT(args.size() == 2);
-  if (args[0].IsNull() || args[1].IsNull()) {
+  if(args.size() == 0){
     return type::ValueFactory::GetNullValueByType(type::TypeId::VARCHAR);
   }
-  std::string str = args[0].ToString() + args[1].ToString();
-  return (type::ValueFactory::GetVarcharValue(str));
+
+  // Allocate new memory
+  executor::ExecutorContext ctx{nullptr};
+  uint32_t str_cnt = static_cast<uint32_t>(args.size());
+  auto pool=ctx.GetPool();
+  uint32_t  *str_lens = static_cast<uint32_t *>(pool->Allocate(sizeof(uint32_t) * str_cnt));
+  const char **concat_strs = static_cast<const char **>(pool->Allocate(sizeof(char*) * str_cnt));
+
+  // Get Concat String Ready
+  for(uint32_t i = 0; i < str_cnt; ++i){
+    str_lens[i]= static_cast<uint32_t>(args[i].GetLength());
+    concat_strs[i] = args[i].GetAs<char*>();
+  }
+
+  auto ret = StringFunctions::Concat(
+      ctx, concat_strs, str_lens, str_cnt);
+
+  std::string str(ret.str, ret.length - 1);
+  return type::ValueFactory::GetVarcharValue(str);
 }
 
 // Number of bytes in string
@@ -227,12 +243,31 @@ type::Value OldEngineStringFunctions::Length(
 
 type::Value OldEngineStringFunctions::Upper(
     UNUSED_ATTRIBUTE const std::vector<type::Value> &args) {
-  throw Exception{"Upper not implemented in old engine"};
+  PELOTON_ASSERT(args.size() == 1);
+  if (args[0].IsNull()) {
+    return type::ValueFactory::GetNullValueByType(type::TypeId::VARCHAR);
+  }
+
+  executor::ExecutorContext ctx{nullptr};
+  auto ret = StringFunctions::Upper(
+      ctx, args.at(0).GetData(), strlen(args.at(0).GetData()) + 1);
+
+  std::string str(ret.str, ret.length - 1);
+  return type::ValueFactory::GetVarcharValue(str);
 }
 
 type::Value OldEngineStringFunctions::Lower(
     UNUSED_ATTRIBUTE const std::vector<type::Value> &args) {
-  throw Exception{"Lower not implemented in old engine"};
+  if (args[0].IsNull()) {
+    return type::ValueFactory::GetNullValueByType(type::TypeId::VARCHAR);
+  }
+
+  executor::ExecutorContext ctx{nullptr};
+  auto ret = StringFunctions::Lower(
+      ctx, args.at(0).GetData(), strlen(args.at(0).GetData()) + 1);
+
+  std::string str(ret.str, ret.length - 1);
+  return type::ValueFactory::GetVarcharValue(str);
 }
 
 }  // namespace function

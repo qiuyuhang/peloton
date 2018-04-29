@@ -31,6 +31,10 @@ PROXY(StringFunctions) {
   DECLARE_METHOD(RTrim);
   DECLARE_METHOD(Substr);
   DECLARE_METHOD(Repeat);
+  // My function
+  DECLARE_METHOD(Upper);
+  DECLARE_METHOD(Lower);
+  DECLARE_METHOD(Concat);
 };
 
 PROXY(StrWithLen) {

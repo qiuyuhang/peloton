@@ -148,12 +148,12 @@ void Catalog::Bootstrap() {
   DatabaseMetricsCatalog::GetInstance(txn);
   TableMetricsCatalog::GetInstance(txn);
   IndexMetricsCatalog::GetInstance(txn);
-  QueryMetricsCatalog::GetInstance(txn);  
+  QueryMetricsCatalog::GetInstance(txn);
   SettingsCatalog::GetInstance(txn);
   TriggerCatalog::GetInstance(txn);
   LanguageCatalog::GetInstance(txn);
   ProcCatalog::GetInstance(txn);
-  
+
   if (settings::SettingsManager::GetBool(settings::SettingId::brain)) {
     QueryHistoryCatalog::GetInstance(txn);
   }
@@ -1060,6 +1060,35 @@ void Catalog::InitializeFunctions() {
           function::BuiltInFuncType{OperatorId::Like,
                                     function::OldEngineStringFunctions::Like},
           txn);
+      // My Function
+      AddBuiltinFunction(
+          "upper",
+          {type::TypeId::VARCHAR}, type::TypeId::VARCHAR,
+          internal_lang, "upper",
+          function::BuiltInFuncType{OperatorId::Upper,
+                                    function::OldEngineStringFunctions::Upper},
+          txn);
+      AddBuiltinFunction(
+          "lower",
+          {type::TypeId::VARCHAR}, type::TypeId::VARCHAR,
+          internal_lang, "lower",
+          function::BuiltInFuncType{OperatorId::Lower,
+                                    function::OldEngineStringFunctions::Lower},
+          txn);
+      AddBuiltinFunction(
+          "concat",
+          {type::TypeId::VARCHAR}, type::TypeId::VARCHAR,
+          internal_lang, "concat",
+          function::BuiltInFuncType{OperatorId::Concat,
+                                    function::OldEngineStringFunctions::Concat},
+          txn);
+      AddBuiltinFunction(
+          "concat",
+          {type::TypeId::VARCHAR,type::TypeId::VARCHAR,type::TypeId::VARCHAR}, type::TypeId::VARCHAR,
+          internal_lang, "concat",
+          function::BuiltInFuncType{OperatorId::Concat,
+                                    function::OldEngineStringFunctions::Concat},
+          txn);
 
       /**
        * decimal functions
@@ -1106,28 +1135,28 @@ void Catalog::InitializeFunctions() {
        * integer functions
        */
       AddBuiltinFunction(
-          "abs", {type::TypeId::TINYINT}, type::TypeId::TINYINT, 
+          "abs", {type::TypeId::TINYINT}, type::TypeId::TINYINT,
           internal_lang, "Abs",
           function::BuiltInFuncType{OperatorId::Abs,
                                     function::DecimalFunctions::_Abs},
           txn);
 
       AddBuiltinFunction(
-          "abs", {type::TypeId::SMALLINT}, type::TypeId::SMALLINT, 
+          "abs", {type::TypeId::SMALLINT}, type::TypeId::SMALLINT,
           internal_lang, "Abs",
           function::BuiltInFuncType{OperatorId::Abs,
                                     function::DecimalFunctions::_Abs},
           txn);
 
       AddBuiltinFunction(
-          "abs", {type::TypeId::INTEGER}, type::TypeId::INTEGER, 
+          "abs", {type::TypeId::INTEGER}, type::TypeId::INTEGER,
           internal_lang, "Abs",
           function::BuiltInFuncType{OperatorId::Abs,
                                     function::DecimalFunctions::_Abs},
           txn);
 
       AddBuiltinFunction(
-          "abs", {type::TypeId::BIGINT}, type::TypeId::BIGINT, 
+          "abs", {type::TypeId::BIGINT}, type::TypeId::BIGINT,
           internal_lang, "Abs",
           function::BuiltInFuncType{OperatorId::Abs,
                                     function::DecimalFunctions::_Abs},

@@ -220,5 +220,68 @@ uint32_t StringFunctions::Length(
   return length;
 }
 
+StringFunctions::StrWithLen StringFunctions::Upper(
+    UNUSED_ATTRIBUTE executor::ExecutorContext &ctx, const char *str,
+    uint32_t str_len) {
+  // llvm expects the len to include the terminating '\0'
+  if (str_len == 1) {
+    return StringFunctions::StrWithLen{nullptr, 1};
+  }
+
+  // Allocate new memory
+  auto *pool = ctx.GetPool();
+  auto *new_str = reinterpret_cast<char *>(pool->Allocate(str_len));
+
+  for (uint32_t i = 0; i < str_len - 1; ++i) {
+    new_str[i] = static_cast<char>(toupper(str[i]));
+  }
+
+  return StringFunctions::StrWithLen{new_str, str_len};
+}
+
+StringFunctions::StrWithLen StringFunctions::Lower(
+    UNUSED_ATTRIBUTE executor::ExecutorContext &ctx, const char *str,
+    uint32_t str_len) {
+  // llvm expects the len to include the terminating '\0'
+  if (str_len == 1) {
+    return StringFunctions::StrWithLen{nullptr, 1};
+  }
+
+  // Allocate new memory
+  auto *pool = ctx.GetPool();
+  auto *new_str = reinterpret_cast<char *>(pool->Allocate(str_len));
+
+  for (uint32_t i = 0; i < str_len - 1; ++i) {
+    new_str[i] = static_cast<char>(tolower(str[i]));
+  }
+
+  return StringFunctions::StrWithLen{new_str, str_len};
+}
+
+StringFunctions::StrWithLen StringFunctions::Concat(
+    UNUSED_ATTRIBUTE executor::ExecutorContext &ctx, const char **concat_strs,
+    const uint32_t *str_lens, const uint32_t str_cnt) {
+  uint32_t str_len = 0, it = 0;
+  for (uint32_t i = 0; i < str_cnt; ++i) {
+    str_len += str_lens[i] - 1;
+  }
+
+  // llvm expects the len to include the terminating '\0'
+  if (++str_len == 1) {
+    return StringFunctions::StrWithLen{nullptr, 1};
+  }
+
+  // Allocate new memory
+  auto *pool = ctx.GetPool();
+  auto *new_str = reinterpret_cast<char *>(pool->Allocate(str_len));
+
+  // Concat string
+  for (uint32_t i = 0; i < str_cnt; ++i) {
+    PELOTON_MEMCPY(new_str + it, concat_strs[i], str_lens[i]);
+    it += str_lens[i] - 1;
+  }
+
+  return StringFunctions::StrWithLen{new_str, str_len};
+}
 }  // namespace function
 }  // namespace peloton
